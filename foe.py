@@ -39,14 +39,14 @@ class FoE:
 		flatenedFilters = np.reshape(flatenedFilters, (self.numFilters, 1, -1))
 		flattenedFilterLength = self.filterSize*self.filterSize
 
-		for i = range((n - k + 1) * (m - k + 1) - flattenedFilterLength +1)
+		for i in range((n - k + 1) * (m - k + 1) - flattenedFilterLength +1):
 			convMatrices[:, i, i:i+flattenedFilterLength] = flatenedFilters
 		return convMatrices
 
 	def computeConvBasisFilters(self):
 		frequencies = np.zeros((self.numBasisFilters, self.filterSize, self.filterSize))
-		for i in range(self.filterSize)
-			for j in range(self.filterSize)
+		for i in range(self.filterSize):
+			for j in range(self.filterSize):
 				frequencies[i*self.filterSize+j, i, j] = 1
 		filters2D = fftpack.idct(fftpack.idct(frequencies, axis=1), axis=2)
 		#must flatten filters and convert to convolutional matrices
@@ -59,7 +59,7 @@ class FoE:
 		flatenedFilters = np.reshape(flatenedFilters, (self.numFilters, 1, -1))
 		flattenedFilterLength = self.filterSize*self.filterSize
 
-		for i = range((n - k + 1) * (m - k + 1) - flattenedFilterLength +1)
+		for i in range((n - k + 1) * (m - k + 1) - flattenedFilterLength +1):
 			convMatrices[:, i, i:i+flattenedFilterLength] = flatenedFilters
 		return convMatrices
 
@@ -90,7 +90,7 @@ class FoE:
 		filters = self.computeConvFilters()
 		phiPP = phiPrimePrime(np.dot(filters, x))
 		d = np.zeros((self.numFilters, phiPP.size[1]))
-		for n in range(self.numFilters)
+		for n in range(self.numFilters):
 			d[n, :, :] = np.diagflat(phiPP[n, :])
 		return d
 
@@ -106,7 +106,7 @@ class FoE:
 		#compute gradients for batch, only updating at the end
 		deltaAlpha = np.zeros((self.numFilters))
 		deltaBeta = np.zeros((self.numBasisFilters))
-		for index in range(noisyImageBatch.shape()[0])
+		for index in range(noisyImageBatch.shape()[0]):
 			#flatten images 
 			noisyFlat = np.reshape(noisyImageBatch[index, :, :], (-1, 1))
 			trueFlat = np.reshape(trueImage[index, :, :], (-1, 1))
