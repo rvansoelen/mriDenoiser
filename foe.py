@@ -14,8 +14,10 @@ class FoE:
 		self.alpha = np.random.rand(self.numFilters) #random values from [0, 1)
 		#One 
 		self.beta = np.random.rand(self.numFilters, self.filterSize, self.filterSize)
-		self.stepSize = 0.001
-		self.basisFilters = self.computeBasisFilters()
+		self.alphaStepSize = 0.001
+		self.betaStepSize = 0.001
+		self.basisFilters = self.computeConvBasisFilters()
+		self.filters = self.computeConvFilters()
 		self.windowSizeX = windowSizeX
 		self.windowSizeY = windowSizeY
 
@@ -41,6 +43,26 @@ class FoE:
 			convMatrices[:, i, i:i+flattenedFilterLength] = flatenedFilters
 		return convMatrices
 
+	def computeConvBasisFilters(self):
+		frequencies = np.zeros((self.numBasisFilters, self.filterSize, self.filterSize))
+		for i in range(self.filterSize)
+			for j in range(self.filterSize)
+				frequencies[i*self.filterSize+j, i, j] = 1
+		filters2D = fftpack.idct(fftpack.idct(frequencies, axis=1), axis=2)
+		#must flatten filters and convert to convolutional matrices
+		assert(self.windowSizeX > self.filterSize and self.windowSizeY > self.filterSize)
+		n = self.windowSizeY
+		m = self.windowSizeX
+	    convMatrices = zeros((self.numFilters, (n - k + 1) * (m - k + 1), n*m))
+	    flatenedFilters = np.zeros((self.numFilters, self.filterSize, self.filterSize))
+		flatenedFilters[:, :self.filterSize, :self.filterSize] = self.filters
+		flatenedFilters = np.reshape(flatenedFilters, (self.numFilters, 1, -1))
+		flattenedFilterLength = self.filterSize*self.filterSize
+
+		for i = range((n - k + 1) * (m - k + 1) - flattenedFilterLength +1)
+			convMatrices[:, i, i:i+flattenedFilterLength] = flatenedFilters
+		return convMatrices
+
 	def deltaE(self, x, noisyFlatImage):
 		filters = self.computeConvFilters()
 		sum = 0
@@ -49,6 +71,14 @@ class FoE:
 		conv2 = self.alpha*np.dot(filters.transpose((0, 2, 1)), phi_prime)
 		deltaE = np.sum(conv2, axis=0) + x - noisyFlatImage
 		return deltaE
+
+	def E(self, image):
+		filters = self.computeConvFilters()
+		conv = filters.dot(image)
+		reutrn -np.sum(np.log(self.phi(conv)))
+
+	def phi(self, x):
+		return self.alpha*np.log(1+x**2)
 
 	def phiPrime(self, input):
 		return self.alpha*2*input/(1+input**2)
@@ -72,24 +102,41 @@ class FoE:
 		return sum(self.alpha*conv2, axis=0) + np.identity(conv2.shape[1])
 
 
-	def train(self, noisyImage, trueImage):
-		#flatten images 
-		noisyFlat = np.reshape(noisyImage, (-1, 1))
-		trueFlat = np.reshape(trueImage, (-1, 1))
+	def train(self, noisyImageBatch, trueImageBatch):
+		#compute gradients for batch, only updating at the end
+		deltaAlpha = np.zeros((self.numFilters))
+		deltaBeta = np.zeros((self.numBasisFilters))
+		for index in range(noisyImageBatch.shape()[0])
+			#flatten images 
+			noisyFlat = np.reshape(noisyImageBatch[index, :, :], (-1, 1))
+			trueFlat = np.reshape(trueImage[index, :, :], (-1, 1))
+			#estimate image 
+			guess = np.zeros((self.windowSizeY*self.windowSizeX))
+			estimate = optimize.newton(lambda x : self.deltaE(x, noisyFlat), guess)
 
-		#estimate image 
-		guess = np.zeros((self.windowSizeY*self.windowSizeX))
-		estimate = optimize.newton(lambda x : self.deltaE(x, noisyFlat), guess)
-
-		#compute loss gradient (see Xu equations 7-8)
+			#compute loss gradient (see Xu equations 7-8)
 			#compute diagonal D
+			d = diagonal(guess)
 			#compute Hessian 
-			#compute Basis Filter B
+			h = hessian(guess)
+			hInv = np.linalg.tensorinv(h)
+			#compute basis filters 
+			b = self.basisFilters
+			bt = b.transpose((0, 2, 1))
+			#compute learned filters
+			f = self.filters
+			ft = f.transpose((0, 2, 1))
+
+			#update alpha and beta weights according to noisy and true images
+			deltaAlpha += -(ft.dot(phiPrime(np.dot(f, guess)))).transpose((0, 2, 1)).dot(hInv).dot(guess-trueImage)
+
+			deltaBeta += -(bt.dot(phiPrime(np.dot(f, guess))) + ft.dot(d).dot(b).dot(guess)).transpose((0, 2, 1)).dot(hInv).dot(guess-trueImage)
+
+		#update weights and filters
+		deltaBeta = deltaBeta.reshape((self.numFilters, self.numFilters))
+		self.alpha = self.alpha - self.alphaStepSize*deltaAlpha
+		self.beta = self.beta - self.betaStepSize*deltaBeta
+		self.filters = self.computeConvFilters()
 
 
-		#update alpha and beta weights according to noisy and true images
 
-		#possibly iterate until convergence
-
-	def getPrior(self):
-		#return prior represented by model
