@@ -23,4 +23,4 @@ def main():
 			foe.train(image)
 
 	#save model to file
-	
+	foe.save('output.foe')

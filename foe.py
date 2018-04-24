@@ -4,6 +4,7 @@
 #in mapEstimator.py 
 import numpy as np
 from scipy import signal, fftpack
+import pickle
 
 class FoE:
 	def __init__(windowSizeX=30, windowSizeY=30):
@@ -21,11 +22,16 @@ class FoE:
 		self.windowSizeX = windowSizeX
 		self.windowSizeY = windowSizeY
 
-	def load(self, filename):
+	def load(filename):
 		#load model from file
+		with open(filename, 'rb') as fid:
+			foe = pickle.load(fid)
+			return foe
 
 	def save(self, filename):
 		#save model to file
+		with open(filename,'wb') as fid:
+			pickle.dump(self,fid) 
 
 	def computeConvFilters(self):
 		filters2D = fftpack.idct(fftpack.idct(self.beta, axis=1), axis=2)

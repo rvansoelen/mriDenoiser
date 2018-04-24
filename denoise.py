@@ -4,7 +4,7 @@
 
 def main() {
 	#load trained FoE model from file
-	foe = loadFoEModel(foeModelFilename)
+	foe = FoE.load(foeModelFilename)
 	#load test images 
 	images = loadImages(imagesDirectory)
 	#for each test image
@@ -30,9 +30,6 @@ def main() {
 
 	#save results
 }
-
-def loadFoEModel(foeModelFilename):
-	#load model from file
 
 def loadImages(imagesDirectory):
 	#load images from directory 
