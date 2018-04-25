@@ -33,6 +33,7 @@ class FoE:
 		with open(filename,'wb') as fid:
 			pickle.dump(self,fid) 
 
+	#Computes the convolutional filters as matrix operators
 	def computeConvFilters(self):
 		filters2D = fftpack.idct(fftpack.idct(self.beta, axis=1), axis=2)
 		#must flatten filters and convert to convolutional matrices
@@ -49,6 +50,7 @@ class FoE:
 			convMatrices[:, i, i:i+flattenedFilterLength] = flatenedFilters
 		return convMatrices
 
+	#Computes the basis filters that when combined form the convolutional filters (structured as matrix operators)
 	def computeConvBasisFilters(self):
 		frequencies = np.zeros((self.numBasisFilters, self.filterSize, self.filterSize))
 		for i in range(self.filterSize):
@@ -69,6 +71,7 @@ class FoE:
 			convMatrices[:, i, i:i+flattenedFilterLength] = flatenedFilters
 		return convMatrices
 
+	#The derivative of the energy term, see paper for details 
 	def deltaE(self, x, noisyFlatImage):
 		filters = self.computeConvFilters()
 		sum = 0
@@ -78,20 +81,25 @@ class FoE:
 		deltaE = np.sum(conv2, axis=0) + x - noisyFlatImage
 		return deltaE
 
+	#The energy term, see paper for details 
 	def E(self, image):
 		filters = self.computeConvFilters()
 		conv = filters.dot(image)
 		reutrn -np.sum(np.log(self.phi(conv)))
 
+	#A function used in the FoE model, see paper for details
 	def phi(self, x):
 		return self.alpha*np.log(1+x**2)
 
+	#The first derivative of the phi function 
 	def phiPrime(self, input):
 		return self.alpha*2*input/(1+input**2)
 
+	#The second derivative of the phi function
 	def phiPrimePrime(self, input):
 		#TODO: second derivative of prime
 
+	#The diagonal matrix required for optimization, see paper for details
 	def diagonal(self, x):
 		filters = self.computeConvFilters()
 		phiPP = phiPrimePrime(np.dot(filters, x))
@@ -100,6 +108,7 @@ class FoE:
 			d[n, :, :] = np.diagflat(phiPP[n, :])
 		return d
 
+	#The hessian matrix required for optimization, see paper for details
 	def hessian(self, x):
 		filters = self.computeConvFilters()
 		d = diagonal(x)
@@ -107,7 +116,7 @@ class FoE:
 		conv2 = np.dot(filters.transpose((0, 2, 1)), conv1)
 		return sum(self.alpha*conv2, axis=0) + np.identity(conv2.shape[1])
 
-
+	#The main function for training the FoE model, one sample at a time 
 	def train(self, noisyImageBatch, trueImageBatch):
 		#compute gradients for batch, only updating at the end
 		deltaAlpha = np.zeros((self.numFilters))

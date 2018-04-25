@@ -22,6 +22,8 @@ class GMM:
 		#perform initial estimation of GMM paramters (see Xu equations 15-18)
 		self.expectationMaximisation()
 
+	#Estimates the GMM parameters based on the noisy image window
+	#Updates the parameters according to Expectation Maximization, see paper for details
 	def expectationMaximisation(self):
 		#update weights until convergence	
 		convergence = false
@@ -48,9 +50,11 @@ class GMM:
 				print('Warning: Maximum number of iterations reached during Gaussian learning')
 				break
 
+	#Calculates the variable z from the given parameters, see paper for details
 	def calculateZ(self, mu, sigma2, pi):
 		numerator = pi*self.gaussian(self.window, mu, sigma2)
 		return numerator/np.sum(numerator, axis=1)
 
+	#Calculates the Gaussian distrbution of the given parameters, evaluated at the given image
 	def gaussian(self, image, mu, sigma2):
 		return np.exp(-(image - mu)**2/(2*sigma2))/np.sqrt(2*math.pi*sigma2)

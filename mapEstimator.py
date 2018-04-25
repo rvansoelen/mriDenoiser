@@ -9,6 +9,8 @@ class MAPEstimator:
 		self.gmm = gmm
 		self.foe = feo
 
+	#Uses MAP estimation to estimate the most likely noise-free image
+	#Uses the L-BFGS method to optimize 
 	def estimate(self):
 		#Use L-BFGS method to optimize GMM 
 		#compute energy gradient as described in papers
