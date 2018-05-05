@@ -1,16 +1,20 @@
 #The main function for image denoiser
 #This method evaluates a previously trained model on MRI images, 
 #collects statistics on performance, and saves the resutls.
+import util
 
-def main() {
+def main():
 	#load trained FoE model from file
-	foe = FoE.load(foeModelFilename)
+	##foe = FoE.load(foeModelFilename)
 	#load test images 
-	images = loadImages(imagesDirectory)
+	imagesDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data'
+	images = util.loadImages(imagesDirectory)
+
 	#for each test image
+	
 	for image in images:
 		#for each window in image
-		windows = segmentImage(image)
+		windows = util.segmentImage(image)
 		for window in windows:
 			#calculate prior probability from FoE
 			prior = foe.getPrior()
@@ -29,12 +33,8 @@ def main() {
 		#calculate accuracy of denoise
 
 	#save results
-}
+	
 
-def loadImages(imagesDirectory):
-	#load images from directory 
 
-def segmentImage(image):
-	#divide images into small windows 
-
-	#return windows
+if __name__== '__main__':
+	main()

@@ -5,9 +5,10 @@
 import numpy as np
 from scipy import signal, fftpack
 import pickle
+import util
 
 class FoE:
-	def __init__(windowSizeX=30, windowSizeY=30):
+	def __init__(self, windowSizeX=util.windowWidth, windowSizeY=util.windowHeight):
 		#initialize variables (basis filters, alpha, beta)
 		self.filterSize = 7
 		self.numFilters = 48
@@ -17,10 +18,11 @@ class FoE:
 		self.beta = np.random.rand(self.numFilters, self.filterSize, self.filterSize)
 		self.alphaStepSize = 0.001
 		self.betaStepSize = 0.001
-		self.basisFilters = self.computeConvBasisFilters()
-		self.filters = self.computeConvFilters()
 		self.windowSizeX = windowSizeX
 		self.windowSizeY = windowSizeY
+		self.basisFilters = self.computeConvBasisFilters()
+		self.filters = self.computeConvFilters()
+		
 
 	def load(filename):
 		#load model from file
@@ -40,8 +42,8 @@ class FoE:
 		assert(self.windowSizeX > self.filterSize and self.windowSizeY > self.filterSize)
 		n = self.windowSizeY
 		m = self.windowSizeX
-	    convMatrices = zeros((self.numFilters, (n - k + 1) * (m - k + 1), n*m))
-	    flatenedFilters = np.zeros((self.numFilters, self.filterSize, self.filterSize))
+		convMatrices = zeros((self.numFilters, (n - k + 1) * (m - k + 1), n*m))
+		flatenedFilters = np.zeros((self.numFilters, self.filterSize, self.filterSize))
 		flatenedFilters[:, :self.filterSize, :self.filterSize] = self.filters
 		flatenedFilters = np.reshape(flatenedFilters, (self.numFilters, 1, -1))
 		flattenedFilterLength = self.filterSize*self.filterSize
@@ -61,8 +63,9 @@ class FoE:
 		assert(self.windowSizeX > self.filterSize and self.windowSizeY > self.filterSize)
 		n = self.windowSizeY
 		m = self.windowSizeX
-	    convMatrices = zeros((self.numFilters, (n - k + 1) * (m - k + 1), n*m))
-	    flatenedFilters = np.zeros((self.numFilters, self.filterSize, self.filterSize))
+		k = self.filterSize
+		convMatrices = np.zeros((self.numFilters, (n - k + 1) * (m - k + 1), n*m))
+		flatenedFilters = np.zeros((self.numFilters, self.filterSize, self.filterSize))
 		flatenedFilters[:, :self.filterSize, :self.filterSize] = self.filters
 		flatenedFilters = np.reshape(flatenedFilters, (self.numFilters, 1, -1))
 		flattenedFilterLength = self.filterSize*self.filterSize
@@ -97,7 +100,9 @@ class FoE:
 
 	#The second derivative of the phi function
 	def phiPrimePrime(self, input):
-		#TODO: second derivative of prime
+		#TODO: second derivative of phi prime
+		print('phiPrimePrime not implemented')
+		return input
 
 	#The diagonal matrix required for optimization, see paper for details
 	def diagonal(self, x):

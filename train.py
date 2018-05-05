@@ -1,26 +1,32 @@
 #trains the foe model
 #This function trains the Field of Experts Model. It loads the training images, 
 #updates the FoE model, and save the model to a file (using the pickling technique)
-import foe, gmm, mapEstimator
-from scipy import ndimage
+import foe
+import util
 
 def main():
-	filenames = ['outoutPlaceholder']
+	noisyDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/noisyData'
+	groundTruthDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/groundTruth'
+
 	#load noisy and ground truth images
-	images = []
-	for filename in filenames:
-		images.append(ndimage.imread(filename))
+	noisyBatch = util.loadImagesAsSegments(noisyDirectory)
+	truthBatch = util.loadImagesAsSegments(groundTruthDirectory)
+	#assume they are ordered correctly
+
 
 	#create initial foe model
-	foe = FoE()
+	FoE = foe.FoE()
 
 	#for each epoch (if more than one)
-	numEpochs = 10
-	for epoch in range():
-		#for each image:
-		for image in images:
-			#call training function of foe model
-			foe.train(image)
+	numEpochs = 1
+	for epoch in range(numEpochs):
+		#call training function of foe model
+		FoE.train(noisyBatch, truthBatch)
+
 
 	#save model to file
-	foe.save('output.foe')
+	FoE.save('output.foe')
+
+
+if __name__ == '__main__':
+	main()
