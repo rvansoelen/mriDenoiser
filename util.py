@@ -20,6 +20,7 @@ def loadImagesAsSegments(imagesDirectory):
 	#load images from directory
 	images = []
 	for file in glob.glob(imagesDirectory+'/*.jpg'):
+		print file
 		image = cv2.imread(file)
 		grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 		segments = segmentImage(grayImage)

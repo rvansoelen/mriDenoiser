@@ -6,7 +6,7 @@ import util
 
 def main():
 	noisyDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/noisyData'
-	groundTruthDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/groundTruth'
+	groundTruthDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/groundTruthData'
 
 	#load noisy and ground truth images
 	noisyBatch = util.loadImagesAsSegments(noisyDirectory)
@@ -19,6 +19,7 @@ def main():
 
 	#for each epoch (if more than one)
 	numEpochs = 1
+	print 'Starting...'
 	for epoch in range(numEpochs):
 		#call training function of foe model
 		FoE.train(noisyBatch, truthBatch)
