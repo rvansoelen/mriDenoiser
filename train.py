@@ -5,8 +5,10 @@ import foe
 import util
 
 def main():
-	noisyDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/noisyData'
-	groundTruthDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/groundTruthData'
+	#noisyDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/noisyData'
+	#groundTruthDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/groundTruthData'
+	noisyDirectory = './data/noisyData'
+	groundTruthDirectory = './data/groundTruthData'
 
 	#load noisy and ground truth images
 	noisyBatch = util.loadImagesAsSegments(noisyDirectory)

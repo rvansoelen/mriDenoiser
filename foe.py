@@ -136,7 +136,13 @@ class FoE:
 		filters = self.computeConvFilters()
 		d = self.diagonal(x)
 		print 'uuio1'
-		conv1 = np.dot(filters.transpose((0, 2, 1)), d)
+		print 'filters transpose: ', filters.transpose((0, 2, 1)).shape
+		print 'd:', d.shape
+		print np.ascontiguousarray(filters.transpose((0, 2, 1))).flags
+		print d.flags
+		pdb.set_trace()
+		#Must make arrays C_CONTIGUOUS!!!
+		conv1 = np.dot(np.ascontiguousarray(filters.transpose((0, 2, 1))), d)
 		print 'uuio2'
 		conv2 = np.dot(conv1, filters)
 		print 'uuio3'
@@ -147,8 +153,9 @@ class FoE:
 		#compute gradients for batch, only updating at the end
 		deltaAlpha = np.zeros((self.numFilters))
 		deltaBeta = np.zeros((self.numFilters, self.numBasisFilters))
-		print len(noisyImageBatch)
-		print len(trueImageBatch)
+		print 'Noisy Num: ', len(noisyImageBatch)
+		print 'NonNoisy Num: ',len(trueImageBatch)
+		pdb.set_trace()
 		for noisyImage, trueImage in itertools.izip(noisyImageBatch, trueImageBatch):
 			print 'i'
 			noisyFlat = noisyImage.reshape(-1, 1)
