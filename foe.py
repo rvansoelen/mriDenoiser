@@ -13,7 +13,7 @@ class FoE:
 	def __init__(self, windowSizeX=util.windowWidth, windowSizeY=util.windowHeight):
 		#initialize variables (basis filters, alpha, beta)
 		self.filterSize = 7
-		self.numFilters = 48
+		self.numFilters = 5
 		self.numBasisFilters = self.filterSize * self.filterSize
 		self.alpha = np.random.rand(self.numFilters, 1, 1) #random values from [0, 1)
 		#One 
@@ -100,7 +100,7 @@ class FoE:
 	#The energy term, see paper for details 
 	def E(self, estimatedImage, trueImage):
 		filters = self.filters
-		conv = filters.dot(estimatedImage)
+		conv = np.matmul(filters, estimatedImage)
 		print 'Estimated Image', estimatedImage
 		print 'Conv: ', conv
 		energy = (np.sum(self.phi(conv)) 
@@ -123,7 +123,7 @@ class FoE:
 	#The diagonal matrix required for optimization, see paper for details
 	def diagonal(self, x):
 		filters = self.filters
-		phiPP = self.phiPrimePrime(np.dot(filters, x))
+		phiPP = self.phiPrimePrime(np.matmul(filters, x))
 		print phiPP.shape
 		d = np.zeros((self.numFilters, phiPP.shape[1], phiPP.shape[1]))
 		for n in range(self.numFilters):
@@ -138,15 +138,16 @@ class FoE:
 		print 'uuio1'
 		print 'filters transpose: ', filters.transpose((0, 2, 1)).shape
 		print 'd:', d.shape
-		print np.ascontiguousarray(filters.transpose((0, 2, 1))).flags
+		#print np.ascontiguousarray(filters.transpose((0, 2, 1))).flags
 		print d.flags
 		pdb.set_trace()
 		#Must make arrays C_CONTIGUOUS!!!
-		conv1 = np.dot(np.ascontiguousarray(filters.transpose((0, 2, 1))), d)
+		conv1 = np.matmul(filters.transpose((0, 2, 1)), d)
 		print 'uuio2'
-		conv2 = np.dot(conv1, filters)
+		conv2 = np.matmul(conv1, filters)
 		print 'uuio3'
-		return sum(self.alpha*conv2, axis=0) + np.identity(conv2.shape[1])
+		pdb.set_trace()
+		return np.sum(self.alpha*conv2, axis=0) + np.identity(conv2.shape[1])
 
 	#The main function for training the FoE model, one sample at a time 
 	def train(self, noisyImageBatch, trueImageBatch):
@@ -195,9 +196,48 @@ class FoE:
 
 			print 'Updating weights'
 			#update alpha and beta weights according to noisy and true images
-			deltaAlpha += -(ft.dot(phiPrime(np.dot(f, guess)))).transpose((0, 2, 1)).dot(hInv).dot(guess-trueImage)
 
-			deltaBeta += -(bt.dot(phiPrime(np.dot(f, guess))) + ft.dot(d).dot(b).dot(guess)).transpose((0, 2, 1)).dot(hInv).dot(guess-trueImage)
+			deltaAlpha += 	-np.matmul(
+								np.matmul(
+									np.matmul(
+										ft, 
+										phiPrime(np.matmul(
+												f, 
+												guess
+											)
+										)
+									).transpose((0, 2, 1)),
+	 								hInv
+								), 
+								guess-trueImage
+							)
+							
+			deltaBeta += 	-np.matmul(
+								np.matmul(
+									(np.matmul(
+										bt, 
+										phiPrime(
+											np.matmul(
+												f, 
+												guess
+											)
+										)
+									)
+									+ 
+									np.matmul(
+										np.matmul(
+											np.matmul(
+												ft, 
+												d
+											), 
+											b
+										), 
+										guess
+									)).transpose((0, 2, 1)),
+									hInv
+								), 
+								guess-trueImage
+							)
 			print 'Updated weights'
 		#update weights and filters
 		deltaBeta = deltaBeta.reshape((self.numFilters, self.filterSize, self.filterSize))

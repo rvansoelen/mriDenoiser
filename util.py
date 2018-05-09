@@ -4,8 +4,8 @@
 import glob
 import cv2
 
-windowHeight = 50
-windowWidth = 50
+windowHeight = 10
+windowWidth = 10
 
 def loadImages(imagesDirectory):
 	#load images from directory
