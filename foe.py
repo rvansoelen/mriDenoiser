@@ -17,7 +17,7 @@ class FoE:
 		self.numBasisFilters = self.filterSize * self.filterSize
 		self.alpha = np.random.rand(self.numFilters, 1, 1) #random values from [0, 1)
 		#One 
-		self.beta = np.random.rand(self.numFilters, self.filterSize, self.filterSize)
+		self.beta = np.random.rand(self.numFilters, self.numBasisFilters)
 		self.alphaStepSize = 0.001
 		self.betaStepSize = 0.001
 		self.windowSizeX = windowSizeX
@@ -40,6 +40,7 @@ class FoE:
 
 	#Computes the convolutional filters as matrix operators
 	def computeConvFilters(self):
+		'''
 		filters2D = fftpack.idct(fftpack.idct(self.beta, axis=1), axis=2)
 		#must flatten filters and convert to convolutional matrices
 		n = self.windowSizeY
@@ -59,7 +60,8 @@ class FoE:
 		for i in range(outputSize):
 			convMatrices[:, i, i:i+flattenedFilterLength] = flattenedFilters
 		print np.sum(np.abs(convMatrices))
-		return convMatrices
+		'''
+		return np.tensordot(self.beta, self.basisFilters, axes=([1, 0]))
 
 	#Computes the basis filters that when combined form the convolutional filters (structured as matrix operators)
 	#NOT CORRECT
@@ -73,16 +75,13 @@ class FoE:
 		n = self.windowSizeY
 		m = self.windowSizeX
 		k = self.filterSize
-		convMatrices = np.zeros((self.numBasisFilters, (n - k + 1) * (m - k + 1), n*m))
-		#flatenedFilters = np.zeros((self.numFilters, self.filterSize, self.filterSize))
-		#flatenedFilters[:, :self.filterSize, :self.filterSize] = self.filters
-		#flatenedFilters = np.reshape(flatenedFilters, (self.numFilters, 1, -1))
-		flatenedFilters = filters2D.reshape((self.numBasisFilters, -1))
-		flattenedFilterLength = self.filterSize*self.filterSize
-
-		for i in range((n - k + 1) * (m - k + 1) - flattenedFilterLength +1):
-			convMatrices[:, i, i:i+flattenedFilterLength] = flatenedFilters
-		return convMatrices
+		outputSize = (n-k+1)*(m-k+1)
+		convMatrices = np.zeros((self.numBasisFilters, outputSize, n, m))
+		#assume convolution has no padding 
+		for i in range(outputSize):
+			convMatrices[:, i, i/(m-k+1):i/(m-k+1)+k, i%(m-k+1):i%(m-k+1)+k] = filters2D
+		#flatten so that images are inputed are flattend arrays
+		return convMatrices.reshape((self.numBasisFilters, outputSize, n*m))
 
 	'''
 	#The derivative of the energy term, see paper for details 
@@ -133,30 +132,30 @@ class FoE:
 
 	#The hessian matrix required for optimization, see paper for details
 	def hessian(self, x):
-		filters = self.computeConvFilters()
+		filters = self.filters
 		d = self.diagonal(x)
 		print 'uuio1'
 		print 'filters transpose: ', filters.transpose((0, 2, 1)).shape
 		print 'd:', d.shape
 		#print np.ascontiguousarray(filters.transpose((0, 2, 1))).flags
 		print d.flags
-		pdb.set_trace()
+		#pdb.set_trace()
 		#Must make arrays C_CONTIGUOUS!!!
 		conv1 = np.matmul(filters.transpose((0, 2, 1)), d)
 		print 'uuio2'
 		conv2 = np.matmul(conv1, filters)
 		print 'uuio3'
-		pdb.set_trace()
+		#pdb.set_trace()
 		return np.sum(self.alpha*conv2, axis=0) + np.identity(conv2.shape[1])
 
 	#The main function for training the FoE model, one sample at a time 
 	def train(self, noisyImageBatch, trueImageBatch):
 		#compute gradients for batch, only updating at the end
-		deltaAlpha = np.zeros((self.numFilters))
-		deltaBeta = np.zeros((self.numFilters, self.numBasisFilters))
+		deltaAlpha = np.zeros((self.numFilters, 1, 1))
+		deltaBeta = np.zeros((self.numFilters, self.filterSize, self.filterSize))
 		print 'Noisy Num: ', len(noisyImageBatch)
 		print 'NonNoisy Num: ',len(trueImageBatch)
-		pdb.set_trace()
+		#pdb.set_trace()
 		for noisyImage, trueImage in itertools.izip(noisyImageBatch, trueImageBatch):
 			print 'i'
 			noisyFlat = noisyImage.reshape(-1, 1)
@@ -185,7 +184,8 @@ class FoE:
 			#compute Hessian 
 			h = self.hessian(estimate)
 			print 'inverting hessian'
-			hInv = np.linalg.tensorinv(h)
+			#hInv = np.linalg.tensorinv(h)
+			hInv = np.linalg.inv(h)
 			print 'inverted hessian'
 			#compute basis filters 
 			b = self.basisFilters
@@ -193,15 +193,29 @@ class FoE:
 			#compute learned filters
 			f = self.filters
 			ft = f.transpose((0, 2, 1))
-
+			#pdb.set_trace()
 			print 'Updating weights'
 			#update alpha and beta weights according to noisy and true images
-
+			test = np.matmul(
+									np.matmul(
+										ft, 
+										self.phiPrime(np.matmul(
+												f, 
+												guess
+											)
+										)
+									).transpose((0, 2, 1)),
+	 								hInv
+								)
+			print test.shape
+			print (guess-trueFlat).shape
+			print deltaAlpha.shape
+			print self.alpha.shape
 			deltaAlpha += 	-np.matmul(
 								np.matmul(
 									np.matmul(
 										ft, 
-										phiPrime(np.matmul(
+										self.phiPrime(np.matmul(
 												f, 
 												guess
 											)
@@ -209,38 +223,45 @@ class FoE:
 									).transpose((0, 2, 1)),
 	 								hInv
 								), 
-								guess-trueImage
+								guess-trueFlat
 							)
 							
+			print ''
+			print f.shape
+			print d.shape
+			print b.shape
+			print guess.shape
+			print deltaBeta.shape
+			print self.beta.shape
+			pdb.set_trace()
 			deltaBeta += 	-np.matmul(
 								np.matmul(
-									(np.matmul(
+									(np.dot(
 										bt, 
-										phiPrime(
+										self.phiPrime(
 											np.matmul(
 												f, 
 												guess
 											)
 										)
-									)
+									).transpose((2, 0, 1, 3))
 									+ 
 									np.matmul(
-										np.matmul(
+										np.dot(
 											np.matmul(
 												ft, 
 												d
 											), 
 											b
-										), 
+										).transpose((0, 2, 1, 3)), 
 										guess
-									)).transpose((0, 2, 1)),
+									)).transpose((0, 1, 3, 2)),
 									hInv
 								), 
-								guess-trueImage
+								guess-trueFlat
 							)
 			print 'Updated weights'
 		#update weights and filters
-		deltaBeta = deltaBeta.reshape((self.numFilters, self.filterSize, self.filterSize))
 		self.alpha = self.alpha - self.alphaStepSize*deltaAlpha
 		self.beta = self.beta - self.betaStepSize*deltaBeta
 		self.filters = self.computeConvFilters()
