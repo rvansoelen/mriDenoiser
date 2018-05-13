@@ -3,7 +3,6 @@
 #as well as storing the current noisy image being processed. The final 
 #optimization is handled in mapEstimator.py
 
-import math
 
 class GMM:
 	#the key variables are the cropped image (window) and the GMM parameters
@@ -57,4 +56,4 @@ class GMM:
 
 	#Calculates the Gaussian distrbution of the given parameters, evaluated at the given image
 	def gaussian(self, image, mu, sigma2):
-		return np.exp(-(image - mu)**2/(2*sigma2))/np.sqrt(2*math.pi*sigma2)
+		return np.exp(-(image - mu)**2/(2*sigma2))/np.sqrt(2*np.pi*sigma2)

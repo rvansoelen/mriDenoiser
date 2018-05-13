@@ -3,6 +3,9 @@
 #updates the FoE model, and save the model to a file (using the pickling technique)
 import foe
 import util
+import random
+import pdb
+import time
 
 def main():
 	#noisyDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/noisyData'
@@ -11,20 +14,31 @@ def main():
 	groundTruthDirectory = './data/groundTruthData'
 
 	#load noisy and ground truth images
-	noisyBatch = util.loadImagesAsSegments(noisyDirectory)
-	truthBatch = util.loadImagesAsSegments(groundTruthDirectory)
+	noisySegs = util.loadImagesAsSegments(noisyDirectory)
+	truthSegs = util.loadImagesAsSegments(groundTruthDirectory)
 	#assume they are ordered correctly
-
+	segPairs = zip(noisySegs, truthSegs)
 
 	#create initial foe model
 	FoE = foe.FoE()
 
 	#for each epoch (if more than one)
 	numEpochs = 1
+	batchSize = 3
+	numBatches = len(segPairs)/batchSize
 	print 'Starting...'
+	start = time.time()
 	for epoch in range(numEpochs):
-		#call training function of foe model
-		FoE.train(noisyBatch, truthBatch)
+		print 'Epoch: ', epoch
+		random.shuffle(segPairs)
+		for batchNumber, segPairBatch in enumerate(util.batch(segPairs, batchSize=batchSize)):
+			if batchNumber %100==0: 
+				lap = time.time() - start
+				print 'Batch ', batchNumber, ' out of ', numBatches, ': ', lap, ' s'
+				start = time.time()
+			#call training function of foe model
+			#updates the weights only once
+			FoE.train(segPairBatch)
 
 
 	#save model to file

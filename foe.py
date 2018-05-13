@@ -104,7 +104,7 @@ class FoE:
 		print 'Conv: ', conv
 		energy = (np.sum(self.phi(conv)) 
 			+ 0.5*np.sum((trueImage-estimatedImage)**2))
-		print energy
+		#print energy
 		return energy
 
 	#A function used in the FoE model, see paper for details
@@ -123,10 +123,10 @@ class FoE:
 	def diagonal(self, x):
 		filters = self.filters
 		phiPP = self.phiPrimePrime(np.matmul(filters, x))
-		print phiPP.shape
+		#print phiPP.shape
 		d = np.zeros((self.numFilters, phiPP.shape[1], phiPP.shape[1]))
 		for n in range(self.numFilters):
-			print 'diag'
+			#print 'diag'
 			d[n, :, :] = np.diagflat(phiPP[n, :])
 		return d
 
@@ -134,30 +134,30 @@ class FoE:
 	def hessian(self, x):
 		filters = self.filters
 		d = self.diagonal(x)
-		print 'uuio1'
-		print 'filters transpose: ', filters.transpose((0, 2, 1)).shape
-		print 'd:', d.shape
+		#print 'uuio1'
+		#print 'filters transpose: ', filters.transpose((0, 2, 1)).shape
+		#print 'd:', d.shape
 		#print np.ascontiguousarray(filters.transpose((0, 2, 1))).flags
-		print d.flags
+		#print d.flags
 		#pdb.set_trace()
 		#Must make arrays C_CONTIGUOUS!!!
 		conv1 = np.matmul(filters.transpose((0, 2, 1)), d)
-		print 'uuio2'
+		#print 'uuio2'
 		conv2 = np.matmul(conv1, filters)
-		print 'uuio3'
+		#print 'uuio3'
 		#pdb.set_trace()
 		return np.sum(self.alpha*conv2, axis=0) + np.identity(conv2.shape[1])
 
 	#The main function for training the FoE model, one sample at a time 
-	def train(self, noisyImageBatch, trueImageBatch):
+	def train(self, segmentPairBatch):
 		#compute gradients for batch, only updating at the end
-		deltaAlpha = np.zeros((self.numFilters, 1, 1))
-		deltaBeta = np.zeros((self.numFilters, self.filterSize, self.filterSize))
-		print 'Noisy Num: ', len(noisyImageBatch)
-		print 'NonNoisy Num: ',len(trueImageBatch)
-		#pdb.set_trace()
-		for noisyImage, trueImage in itertools.izip(noisyImageBatch, trueImageBatch):
-			print 'i'
+		deltaAlpha = np.zeros(self.alpha.shape)
+		deltaBeta = np.zeros(self.beta.shape)
+		i=0
+		for noisyImage, trueImage in segmentPairBatch:
+			#print 'Iteration: ', i
+			i += 1
+			if i > 10: break
 			noisyFlat = noisyImage.reshape(-1, 1)
 			trueFlat = trueImage.reshape(-1, 1)
 			#flatten images 
@@ -166,7 +166,7 @@ class FoE:
 			#estimate image 
 			guess = np.random.rand(self.windowSizeY*self.windowSizeX, 1)
 			#print self.deltaE(guess, noisyFlat).shape
-			print guess.shape
+			#print guess.shape
 			#estimate = optimize.newton(lambda x : self.deltaE(x, noisyFlat), 0)#guess)
 			#temporarily get rid of:
 			'''
@@ -183,10 +183,10 @@ class FoE:
 			d = self.diagonal(estimate)
 			#compute Hessian 
 			h = self.hessian(estimate)
-			print 'inverting hessian'
+			#print 'inverting hessian'
 			#hInv = np.linalg.tensorinv(h)
 			hInv = np.linalg.inv(h)
-			print 'inverted hessian'
+			#print 'inverted hessian'
 			#compute basis filters 
 			b = self.basisFilters
 			bt = b.transpose((0, 2, 1))
@@ -194,7 +194,7 @@ class FoE:
 			f = self.filters
 			ft = f.transpose((0, 2, 1))
 			#pdb.set_trace()
-			print 'Updating weights'
+			#print 'Updating weights'
 			#update alpha and beta weights according to noisy and true images
 			test = np.matmul(
 									np.matmul(
@@ -207,10 +207,10 @@ class FoE:
 									).transpose((0, 2, 1)),
 	 								hInv
 								)
-			print test.shape
-			print (guess-trueFlat).shape
-			print deltaAlpha.shape
-			print self.alpha.shape
+			#print test.shape
+			#print (guess-trueFlat).shape
+			#print deltaAlpha.shape
+			#print self.alpha.shape
 			deltaAlpha += 	-np.matmul(
 								np.matmul(
 									np.matmul(
@@ -226,14 +226,13 @@ class FoE:
 								guess-trueFlat
 							)
 							
-			print ''
-			print f.shape
-			print d.shape
-			print b.shape
-			print guess.shape
-			print deltaBeta.shape
-			print self.beta.shape
-			pdb.set_trace()
+			#print ''
+			#print f.shape
+			#print d.shape
+			#print b.shape
+			#print guess.shape
+			#print deltaBeta.shape
+			#print self.beta.shape
 			deltaBeta += 	-np.matmul(
 								np.matmul(
 									(np.dot(
@@ -259,12 +258,11 @@ class FoE:
 									hInv
 								), 
 								guess-trueFlat
-							)
-			print 'Updated weights'
+							).reshape(self.beta.shape)
 		#update weights and filters
 		self.alpha = self.alpha - self.alphaStepSize*deltaAlpha
 		self.beta = self.beta - self.betaStepSize*deltaBeta
 		self.filters = self.computeConvFilters()
-
+		#print "Finished Batch"
 
 

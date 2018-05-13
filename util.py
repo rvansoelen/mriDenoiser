@@ -3,6 +3,8 @@
 #This file may not be used if it is more convient to store variables within their respective classes
 import glob
 import cv2
+import nibabel as nib
+import pdb
 
 windowHeight = 10
 windowWidth = 10
@@ -16,15 +18,23 @@ def loadImages(imagesDirectory):
 		images.append(grayImage)
 	return images
 
-def loadImagesAsSegments(imagesDirectory):
+def loadImagesAsSegments(imagesDirectory, isMNC=True):
 	#load images from directory
 	images = []
-	for file in glob.glob(imagesDirectory+'/*.jpg'):
-		print file
-		image = cv2.imread(file)
-		grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-		segments = segmentImage(grayImage)
-		images.extend(segments)
+	if isMNC:
+		for file in glob.glob(imagesDirectory+'/*.mnc'):
+			mnc = nib.load(file)
+			data = mnc.get_data()
+			for image in data:
+				segments = segmentImage(image)
+				images.extend(segments)
+
+	else:
+		for file in glob.glob(imagesDirectory+'/*.jpg'):
+			image = cv2.imread(file)
+			grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+			segments = segmentImage(grayImage)
+			images.extend(segments)
 	return images
 
 
@@ -40,3 +50,8 @@ def segmentImage(image):
 		for i in range(0, numSegX*windowWidth, windowWidth):
 			segments.append(image[j:j+windowHeight, i:i+windowWidth])
 	return segments
+
+def batch(iterable, batchSize=1):
+    l = len(iterable)
+    for ndx in range(0, l, batchSize):
+        yield iterable[ndx:min(ndx + batchSize, l)]
