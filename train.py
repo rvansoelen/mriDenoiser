@@ -6,12 +6,15 @@ import util
 import random
 import pdb
 import time
+import matplotlib.pyplot as plt
 
 def main():
 	#noisyDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/noisyData'
 	#groundTruthDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/groundTruthData'
-	noisyDirectory = './data/noisyData'
+	noiseLevel = '3pn'
+	noisyDirectory = './data/noisyData/'+noiseLevel
 	groundTruthDirectory = './data/groundTruthData'
+	outputDirectory = './output/3pn_pt2/'
 
 	#load noisy and ground truth images
 	noisySegs = util.loadImagesAsSegments(noisyDirectory)
@@ -24,7 +27,7 @@ def main():
 
 	#for each epoch (if more than one)
 	numEpochs = 1
-	batchSize = 3
+	batchSize = 10
 	numBatches = len(segPairs)/batchSize
 	print 'Starting...'
 	start = time.time()
@@ -36,13 +39,20 @@ def main():
 				lap = time.time() - start
 				print 'Batch ', batchNumber, ' out of ', numBatches, ': ', lap, ' s'
 				start = time.time()
+				FoE.save(outputDirectory+'model_'+noiseLevel+'_'+str(batchNumber)+'.foe')
 			#call training function of foe model
 			#updates the weights only once
 			FoE.train(segPairBatch)
 
 
 	#save model to file
-	FoE.save('output.foe')
+	FoE.save(outputDirectory+'model_'+noiseLevel+'_final.foe')
+	
+	#Plot error
+	plt.plot(FoE.errorHistory)
+	plt.xlabel('Training Batch Iteration')
+	plt.ylabel('L2 Loss')
+	plt.show()
 
 
 if __name__ == '__main__':

@@ -18,20 +18,15 @@ class FoE:
 		self.alpha = np.random.rand(self.numFilters, 1, 1) #random values from [0, 1)
 		#One 
 		self.beta = np.random.rand(self.numFilters, self.numBasisFilters)
-		self.alphaStepSize = 0.001
-		self.betaStepSize = 0.001
+		self.alphaStepSize = 0.01
+		self.betaStepSize = 0.01
 		self.windowSizeX = windowSizeX
 		self.windowSizeY = windowSizeY
 		assert(self.windowSizeX > self.filterSize and self.windowSizeY > self.filterSize)
 		self.basisFilters = self.computeConvBasisFilters()
 		self.filters = self.computeConvFilters()
-		
-
-	def load(filename):
-		#load model from file
-		with open(filename, 'rb') as fid:
-			foe = pickle.load(fid)
-			return foe
+		self.errorHistory = []
+		#self.brk = True
 
 	def save(self, filename):
 		#save model to file
@@ -83,28 +78,33 @@ class FoE:
 		#flatten so that images are inputed are flattend arrays
 		return convMatrices.reshape((self.numBasisFilters, outputSize, n*m))
 
-	'''
+	
 	#The derivative of the energy term, see paper for details 
-	#not sure if correct
-	def deltaE(self, x, noisyFlatImage):
-		filters = self.computeConvFilters()
-		sum = 0
-		conv1 = np.dot(filters, x)
+	def jacE(self, x, noisyFlatImage):
+		x = x.reshape((-1, 1))
+		noisyFlatImage = noisyFlatImage.reshape((-1, 1))
+		filters = self.filters
+		conv1 = np.matmul(filters, x)
 		phi_prime = self.phiPrime(conv1)
-		conv2 = self.alpha*np.dot(filters.transpose((0, 2, 1)), phi_prime)
+		conv2 = self.alpha*np.matmul(filters.transpose((0, 2, 1)), phi_prime)
 		deltaE = np.sum(conv2, axis=0) + x - noisyFlatImage
-		return deltaE
-	'''
+		#print 'Jac', deltaE.reshape((-1))
+		return deltaE.reshape((-1))
+	
 
 	#The energy term, see paper for details 
-	def E(self, estimatedImage, trueImage):
+	def E(self, estimatedImage, noisyFlatImage):
+		estimatedImage = estimatedImage.reshape((-1, 1))
+		noisyFlatImage = noisyFlatImage.reshape((-1, 1))
 		filters = self.filters
 		conv = np.matmul(filters, estimatedImage)
-		print 'Estimated Image', estimatedImage
-		print 'Conv: ', conv
+		#print 'Estimated Image', estimatedImage
+		#print 'Conv: ', conv
 		energy = (np.sum(self.phi(conv)) 
-			+ 0.5*np.sum((trueImage-estimatedImage)**2))
+			+ 0.5*np.sum((noisyFlatImage-estimatedImage)**2))
 		#print energy
+		#if self.brk:
+		#	pdb.set_trace()
 		return energy
 
 	#A function used in the FoE model, see paper for details
@@ -131,8 +131,9 @@ class FoE:
 		return d
 
 	#The hessian matrix required for optimization, see paper for details
-	def hessian(self, x):
+	def hessian(self, x, placeholder=None): #placeholder is required for scipy.optimize.minimize
 		filters = self.filters
+		x = x.reshape((-1, 1))
 		d = self.diagonal(x)
 		#print 'uuio1'
 		#print 'filters transpose: ', filters.transpose((0, 2, 1)).shape
@@ -153,31 +154,33 @@ class FoE:
 		#compute gradients for batch, only updating at the end
 		deltaAlpha = np.zeros(self.alpha.shape)
 		deltaBeta = np.zeros(self.beta.shape)
-		i=0
+		#i=0
+		self.errorHistory = []
 		for noisyImage, trueImage in segmentPairBatch:
 			#print 'Iteration: ', i
-			i += 1
-			if i > 10: break
+			#i += 1
+			#if i > 10: break
 			noisyFlat = noisyImage.reshape(-1, 1)
 			trueFlat = trueImage.reshape(-1, 1)
 			#flatten images 
 			#noisyFlat = np.reshape(noisyImageBatch[index, :, :], (-1, 1))
 			#trueFlat = np.reshape(trueImage[index, :, :], (-1, 1))
 			#estimate image 
-			guess = np.random.rand(self.windowSizeY*self.windowSizeX, 1)
+			guess = noisyImage.reshape((-1)) #np.random.rand(self.windowSizeY*self.windowSizeX, 1)
 			#print self.deltaE(guess, noisyFlat).shape
 			#print guess.shape
 			#estimate = optimize.newton(lambda x : self.deltaE(x, noisyFlat), 0)#guess)
 			#temporarily get rid of:
-			'''
-			result = optimize.minimize(self.E, guess, args=(noisyFlat), options={'maxiter':5, 'disp':True})
-			estimate = result.x
-			if not result.success:
+			
+			result = optimize.minimize(self.E, guess, method='Newton-CG', jac=self.jacE, hess=self.hessian, args=(noisyFlat)) #, options={'disp':True})#'maxiter':500,
+			#pdb.set_trace()
+			estimate = result.x.reshape((-1, 1))
+			'''if not result.success:
 				print 'Low Level FoE optimizer exited without success'
 			else:
 				print 'Success'
 			'''
-			estimate = guess
+			#estimate = guess
 			#compute loss gradient (see Xu equations 7-8)
 			#compute diagonal D
 			d = self.diagonal(estimate)
@@ -196,17 +199,7 @@ class FoE:
 			#pdb.set_trace()
 			#print 'Updating weights'
 			#update alpha and beta weights according to noisy and true images
-			test = np.matmul(
-									np.matmul(
-										ft, 
-										self.phiPrime(np.matmul(
-												f, 
-												guess
-											)
-										)
-									).transpose((0, 2, 1)),
-	 								hInv
-								)
+
 			#print test.shape
 			#print (guess-trueFlat).shape
 			#print deltaAlpha.shape
@@ -217,13 +210,13 @@ class FoE:
 										ft, 
 										self.phiPrime(np.matmul(
 												f, 
-												guess
+												estimate
 											)
 										)
 									).transpose((0, 2, 1)),
 	 								hInv
 								), 
-								guess-trueFlat
+								estimate-trueFlat
 							)
 							
 			#print ''
@@ -240,7 +233,7 @@ class FoE:
 										self.phiPrime(
 											np.matmul(
 												f, 
-												guess
+												estimate
 											)
 										)
 									).transpose((2, 0, 1, 3))
@@ -253,16 +246,24 @@ class FoE:
 											), 
 											b
 										).transpose((0, 2, 1, 3)), 
-										guess
+										estimate
 									)).transpose((0, 1, 3, 2)),
 									hInv
 								), 
-								guess-trueFlat
+								estimate-trueFlat
 							).reshape(self.beta.shape)
 		#update weights and filters
 		self.alpha = self.alpha - self.alphaStepSize*deltaAlpha
 		self.beta = self.beta - self.betaStepSize*deltaBeta
 		self.filters = self.computeConvFilters()
+		err = np.mean((estimate-trueFlat)**2)
+		print 'L2 Error: ', err
+		self.errorHistory.append(err)
 		#print "Finished Batch"
 
 
+def load(filename):
+		#load model from file
+		with open(filename, 'rb') as fid:
+			foe = pickle.load(fid)
+		return foe
