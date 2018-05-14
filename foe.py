@@ -155,7 +155,7 @@ class FoE:
 		deltaAlpha = np.zeros(self.alpha.shape)
 		deltaBeta = np.zeros(self.beta.shape)
 		#i=0
-		self.errorHistory = []
+		#self.errorHistory = []
 		for noisyImage, trueImage in segmentPairBatch:
 			#print 'Iteration: ', i
 			#i += 1
