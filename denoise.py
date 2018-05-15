@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 def main():
 	#load trained FoE model from file
-	foeModelFilename = './output/model_3pn_final.foe'
+	foeModelFilename = './output/model_3pn_500.foe'
 	foeModel = foe.load(foeModelFilename)
 	#load test images 
 	noisyDirectory = './data/noisyData/3pn'

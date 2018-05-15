@@ -8,16 +8,18 @@ import pickle
 import util
 import itertools
 import pdb
+import time
+
 
 class FoE:
 	def __init__(self, windowSizeX=util.windowWidth, windowSizeY=util.windowHeight):
 		#initialize variables (basis filters, alpha, beta)
-		self.filterSize = 7
+		self.filterSize = 6
 		self.numFilters = 5
 		self.numBasisFilters = self.filterSize * self.filterSize
-		self.alpha = np.random.rand(self.numFilters, 1, 1) #random values from [0, 1)
+		self.alpha = np.random.rand(self.numFilters, 1, 1)/self.numFilters #random values from [0, 1)
 		#One 
-		self.beta = np.random.rand(self.numFilters, self.numBasisFilters)
+		self.beta = np.random.rand(self.numFilters, self.numBasisFilters)/(self.numFilters*self.numBasisFilters)
 		self.alphaStepSize = 0.01
 		self.betaStepSize = 0.01
 		self.windowSizeX = windowSizeX
@@ -86,7 +88,8 @@ class FoE:
 		filters = self.filters
 		conv1 = np.matmul(filters, x)
 		phi_prime = self.phiPrime(conv1)
-		conv2 = self.alpha*np.matmul(filters.transpose((0, 2, 1)), phi_prime)
+		#conv2 = self.alpha*np.matmul(filters.transpose((0, 2, 1)), phi_prime)
+		conv2 = np.matmul(filters.transpose((0, 2, 1)), phi_prime)
 		deltaE = np.sum(conv2, axis=0) + x - noisyFlatImage
 		#print 'Jac', deltaE.reshape((-1))
 		return deltaE.reshape((-1))
@@ -109,15 +112,15 @@ class FoE:
 
 	#A function used in the FoE model, see paper for details
 	def phi(self, x):
-		return self.alpha*np.log(1+x**2)
+		return self.alpha*np.log(1+0.5*x**2)
 
 	#The first derivative of the phi function 
 	def phiPrime(self, input):
-		return self.alpha*2*input/(1+input**2)
+		return self.alpha*input/(1+0.5*input**2)
 
 	#The second derivative of the phi function
 	def phiPrimePrime(self, input):
-		return self.alpha*2*(1-input**2)/(1+input**2)**2
+		return self.alpha*(1-0.5*input**2)/(1+0.5*input**2)**2
 
 	#The diagonal matrix required for optimization, see paper for details
 	def diagonal(self, x):
@@ -147,15 +150,16 @@ class FoE:
 		conv2 = np.matmul(conv1, filters)
 		#print 'uuio3'
 		#pdb.set_trace()
-		return np.sum(self.alpha*conv2, axis=0) + np.identity(conv2.shape[1])
+		return np.sum(conv2, axis=0) + np.identity(conv2.shape[1])
 
 	#The main function for training the FoE model, one sample at a time 
 	def train(self, segmentPairBatch):
 		#compute gradients for batch, only updating at the end
+		start = time.time()
 		deltaAlpha = np.zeros(self.alpha.shape)
 		deltaBeta = np.zeros(self.beta.shape)
 		#i=0
-		#self.errorHistory = []
+		batchErrorHistory = []
 		for noisyImage, trueImage in segmentPairBatch:
 			#print 'Iteration: ', i
 			#i += 1
@@ -172,14 +176,13 @@ class FoE:
 			#estimate = optimize.newton(lambda x : self.deltaE(x, noisyFlat), 0)#guess)
 			#temporarily get rid of:
 			
-			result = optimize.minimize(self.E, guess, method='Newton-CG', jac=self.jacE, hess=self.hessian, args=(noisyFlat)) #, options={'disp':True})#'maxiter':500,
+			result = optimize.minimize(self.E, guess, method='Newton-CG', jac=self.jacE, hess=self.hessian, args=(noisyFlat), options={'xtol': 1e-03, 'eps': 1e-04, 'maxiter': 150,'disp':False})
 			#pdb.set_trace()
 			estimate = result.x.reshape((-1, 1))
-			'''if not result.success:
+			if not result.success:
 				print 'Low Level FoE optimizer exited without success'
-			else:
-				print 'Success'
-			'''
+			err = np.sum((estimate-trueFlat)**2)
+			batchErrorHistory.append(err)
 			#estimate = guess
 			#compute loss gradient (see Xu equations 7-8)
 			#compute diagonal D
@@ -218,7 +221,6 @@ class FoE:
 								), 
 								estimate-trueFlat
 							)
-							
 			#print ''
 			#print f.shape
 			#print d.shape
@@ -252,13 +254,17 @@ class FoE:
 								), 
 								estimate-trueFlat
 							).reshape(self.beta.shape)
+			#print deltaAlpha
+			#print deltaBeta
 		#update weights and filters
-		self.alpha = self.alpha - self.alphaStepSize*deltaAlpha
-		self.beta = self.beta - self.betaStepSize*deltaBeta
+		self.alpha = self.alpha + self.alphaStepSize*deltaAlpha
+		self.beta = self.beta + self.betaStepSize*deltaBeta
 		self.filters = self.computeConvFilters()
-		err = np.mean((estimate-trueFlat)**2)
-		print 'L2 Error: ', err
-		self.errorHistory.append(err)
+		self.errorHistory.extend(batchErrorHistory)
+		print 'Mean L2 Error over batch: ', np.mean(batchErrorHistory)
+		if np.any(self.alpha < 0):
+			print 'Warning: Some elements of alpha are negative'
+		print 'Batch time: ', time.time()-start
 		#print "Finished Batch"
 
 

@@ -14,7 +14,7 @@ def main():
 	noiseLevel = '3pn'
 	noisyDirectory = './data/noisyData/'+noiseLevel
 	groundTruthDirectory = './data/groundTruthData'
-	outputDirectory = './output/3pn_pt2/'
+	outputDirectory = './output/3pn_pt4/'
 
 	#load noisy and ground truth images
 	noisySegs = util.loadImagesAsSegments(noisyDirectory)

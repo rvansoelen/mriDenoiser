@@ -18,7 +18,6 @@ class MAPEstimator:
 		#Use L-BFGS method to optimize GMM 
 		#compute energy gradient as described in papers
 		#get foe variables
-		alpha = self.foe.alpha
 		filters = self.foe.filters
 		phi = self.foe.phi
 		phiPrime = self.foe.phiPrime
@@ -45,7 +44,7 @@ class MAPEstimator:
 		
 		def E(denoisedWindow): 
 			denoisedWindow = denoisedWindow.reshape((-1, 1))
-			ret = (np.sum(alpha*phi(np.matmul(filters, denoisedWindow))) 
+			ret = (np.sum(phi(np.matmul(filters, denoisedWindow))) 
 							+ np.sum(weights*z
 								*(np.log(pi)+np.log(gaussian(noisyWindow-denoisedWindow, mu, sigma2))))
 							)
@@ -53,7 +52,7 @@ class MAPEstimator:
 
 		def dE(denoisedWindow): 
 			denoisedWindow = denoisedWindow.reshape((-1, 1))
-			ret = (np.sum(alpha*np.matmul(filters.transpose((0, 2, 1)), phiPrime(np.matmul(filters, denoisedWindow))), axis=0)
+			ret = (np.sum(np.matmul(filters.transpose((0, 2, 1)), phiPrime(np.matmul(filters, denoisedWindow))), axis=0)
 							+ np.sum(weights*z
 								*(noisyWindow - denoisedWindow - mu)/sigma2, axis=1, keepdims=True)
 					).reshape((-1))
