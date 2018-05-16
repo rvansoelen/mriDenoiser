@@ -25,13 +25,4 @@ Python library scipy is used for creating the convolutional filters and for opti
 Python library pickle will be used for saving and loading previously trained models. 
 
 
-When submitting the pesudocode assignment, it was estimated that about 80% of the code would be completed by this 
-time, not including debugging. The progress of the project has largely adhered to this expectation, and is beyond 
-50% completion. All major classes and fucntions have most or all of thier code written. The most complex parts of 
-the project (training and optimizing the FoE, GMM, and MAP models) have all of their code written. Furthermore, the 
-general training and evaluation algorithms are nearly complete, with just the evaluation post-processing step 
-missing. In the following weeks, efforts will be focused on finishing the remaining sections of code, and testing/
-debugging the code. This is estimated to take about 1.5 weeks. In the remaining time, the model will be trained, and 
-the final report will be written.
-
 
