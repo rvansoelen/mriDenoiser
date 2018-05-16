@@ -19,7 +19,7 @@ def main():
 	groundTruthDirectory = './data/groundTruthData'
 	noisyImages = util.loadImagesAsSegments(noisyDirectory)
 	trueImages = util.loadImagesAsSegments(groundTruthDirectory)
-	showImageResults = False
+	showImageResults = True
 
 	#for each test image
 	map = mapest.MAPEstimator(foeModel)
