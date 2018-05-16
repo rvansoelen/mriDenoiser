@@ -12,6 +12,7 @@ class MAPEstimator:
 		self.foe = foe
 
 	#Uses MAP estimation to estimate the most likely noise-free image
+	#MAP is performed by minimizing the energy (log of proability)
 	#Uses the L-BFGS method to optimize 
 	def estimate(self):
 		assert(self.gmm != None)
@@ -24,46 +25,32 @@ class MAPEstimator:
 
 		#get gmm variables
 		z = self.gmm.z
-		noisyWindow = self.gmm.window
+		noisySegment = self.gmm.segment
 		mu = self.gmm.mu
 		sigma2 = self.gmm.sigma2
 		pi = self.gmm.pi
 		gaussian = self.gmm.gaussian
-		weights = np.ones((1, self.gmm.numGaussians)) /self.gmm.windowSize
-
-		def eTest(x):
-			pdb.set_trace()
-			print 'eTest ',x
-			return 1
-
-		def deTest(x):
-			pdb.set_trace()
-			print 'deTest ', x
-			return np.ones(x.shape)
-
+		weights = np.ones((1, self.gmm.numGaussians)) /self.gmm.segmentSize
 		
-		def E(denoisedWindow): 
-			denoisedWindow = denoisedWindow.reshape((-1, 1))
-			ret = (np.sum(phi(np.matmul(filters, denoisedWindow))) 
+		#Create functions for energy minimization
+		def E(denoisedSegment): 
+			denoisedSegment = denoisedSegment.reshape((-1, 1))
+			ret = (np.sum(phi(np.matmul(filters, denoisedSegment))) 
 							+ np.sum(weights*z
-								*(np.log(pi)+np.log(gaussian(noisyWindow-denoisedWindow, mu, sigma2))))
+								*(np.log(pi)+np.log(gaussian(noisySegment-denoisedSegment, mu, sigma2))))
 							)
 			return ret
 
-		def dE(denoisedWindow): 
-			denoisedWindow = denoisedWindow.reshape((-1, 1))
-			ret = (np.sum(np.matmul(filters.transpose((0, 2, 1)), phiPrime(np.matmul(filters, denoisedWindow))), axis=0)
+		def dE(denoisedSegment): 
+			denoisedSegment = denoisedSegment.reshape((-1, 1))
+			ret = (np.sum(np.matmul(filters.transpose((0, 2, 1)), phiPrime(np.matmul(filters, denoisedSegment))), axis=0)
 							+ np.sum(weights*z
-								*(noisyWindow - denoisedWindow - mu)/sigma2, axis=1, keepdims=True)
+								*(noisySegment - denoisedSegment - mu)/sigma2, axis=1, keepdims=True)
 					).reshape((-1))
 			return ret
-		dTest = lambda denoisedWindow: np.ones(denoisedWindow.shape)
-		#pdb.set_trace()
+
 		#Use L-BFGS to estimate the most probable image
-		#scipy.optimize.fmin_l_bfgs_b (limited memory, bounded) or scipy.optimize.fmin_bfgs (original)
-		guessImage = np.random.rand(self.gmm.windowSize)
-		print 'Starting L-BFGS'
+		guessImage = noisySegment
 		denoised, value, info = optimize.fmin_l_bfgs_b(E, guessImage, fprime=dE)
-		print 'Ended L-BFGS'
 		#output best prediction of true image
 		return denoised

@@ -9,8 +9,6 @@ import time
 import matplotlib.pyplot as plt
 
 def main():
-	#noisyDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/noisyData'
-	#groundTruthDirectory = '/Users/rvansoelen/Documents/mriDenoiser/data/groundTruthData'
 	noiseLevel = '3pn'
 	noisyDirectory = './data/noisyData/'+noiseLevel
 	groundTruthDirectory = './data/groundTruthData'
@@ -34,6 +32,7 @@ def main():
 	for epoch in range(numEpochs):
 		print 'Epoch: ', epoch
 		random.shuffle(segPairs)
+		#group the segments into mini-batches for training
 		for batchNumber, segPairBatch in enumerate(util.batch(segPairs, batchSize=batchSize)):
 			if batchNumber %100==0: 
 				lap = time.time() - start
@@ -41,7 +40,7 @@ def main():
 				start = time.time()
 				FoE.save(outputDirectory+'model_'+noiseLevel+'_'+str(batchNumber)+'.foe')
 			#call training function of foe model
-			#updates the weights only once
+			#updates the weights only once per batch
 			FoE.train(segPairBatch)
 
 

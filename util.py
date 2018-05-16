@@ -1,5 +1,5 @@
 #This file holds all utility functions that might be used in multiple scripts
-#It also contains any global constants like the window size, filter size, number of filters, ect.
+#It also contains any global constants like the segment size, filter size, number of filters, ect.
 #This file may not be used if it is more convient to store variables within their respective classes
 import glob
 import cv2
@@ -7,8 +7,8 @@ import nibabel as nib
 import pdb
 import numpy as np
 
-windowHeight = 13
-windowWidth = 13
+segmentHeight = 13
+segmentWidth = 13
 
 def loadImages(imagesDirectory, isMNC=True):
 	#load images from directory
@@ -52,16 +52,16 @@ def loadImagesAsSegments(imagesDirectory, isMNC=True):
 
 
 def segmentImage(image):
-	#divide images into small windows 
-	#return windows
-	assert(image.shape[0] >= windowHeight)
-	assert(image.shape[1] >= windowWidth)
-	numSegY = image.shape[0]/windowHeight
-	numSegX = image.shape[1]/windowWidth
+	#divide images into small segments 
+	#return segments
+	assert(image.shape[0] >= segmentHeight)
+	assert(image.shape[1] >= segmentWidth)
+	numSegY = image.shape[0]/segmentHeight
+	numSegX = image.shape[1]/segmentWidth
 	segments = []
-	for j in range(0, numSegY*windowHeight, windowHeight):
-		for i in range(0, numSegX*windowWidth, windowWidth):
-			segments.append(image[j:j+windowHeight, i:i+windowWidth])
+	for j in range(0, numSegY*segmentHeight, segmentHeight):
+		for i in range(0, numSegX*segmentWidth, segmentWidth):
+			segments.append(image[j:j+segmentHeight, i:i+segmentWidth])
 	return segments
 
 def batch(iterable, batchSize=1):
